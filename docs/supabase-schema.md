@@ -216,4 +216,4 @@ See the Makefile for available migration commands:
 - `make migrate-up`: Apply pending migrations
 - `make migrate-down`: Rollback last migration
 - `make migrate-reset`: Reset all migrations
-- `make db-status`: Check migration status
+- `make db-status`: Check migration status 
