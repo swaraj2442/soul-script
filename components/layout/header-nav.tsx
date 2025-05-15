@@ -41,7 +41,7 @@ export function HeaderNav() {
           <Link href="/" className="flex items-center space-x-2">
             <FileText className="h-6 w-6" />
             <span className="hidden font-bold sm:inline-block">
-              DocChat AI
+              Soul Script
             </span>
           </Link>
           
@@ -82,7 +82,7 @@ export function HeaderNav() {
                           >
                             <MessageSquare className="h-6 w-6" />
                             <div className="mb-2 mt-4 text-lg font-medium">
-                              DocChat AI
+                              Soul Script
                             </div>
                             <p className="text-sm leading-tight text-muted-foreground">
                               Intelligent document Q&A powered by AI
@@ -187,7 +187,7 @@ export function HeaderNav() {
                   onClick={() => setIsOpen(false)}
                 >
                   <FileText className="h-5 w-5" />
-                  <span>DocChat AI</span>
+                  <span>Soul Script</span>
                 </Link>
                 <Separator />
                 <div className="flex flex-col gap-3">

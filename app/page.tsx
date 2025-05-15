@@ -42,7 +42,7 @@ export default function Home() {
               </h1>
               <p className="mx-auto text-lg md:text-xl text-muted-foreground leading-relaxed">
                 Upload documents, ask questions, and get instant answers powered by AI.
-                DocChat analyzes your content to provide accurate, contextual responses.
+                Soul Script analyzes your content to provide accurate, contextual responses.
               </p>
             </div>
             {session && (

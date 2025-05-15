@@ -9,7 +9,7 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'DocChat AI - Intelligent Document Q&A',
+  title: 'Soul Script - Intelligent Document Q&A',
   description: 'Upload documents and ask questions about their content using AI',
 };
 
