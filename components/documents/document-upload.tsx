@@ -111,11 +111,11 @@ export function DocumentUpload({ onUploadComplete }: DocumentUploadProps) {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Update document status to queued for processing
+      // Update document status to processing
       const { error: updateError } = await supabase
         .from('documents')
         .update({
-          status: 'queued',
+          status: 'processing',
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId);
