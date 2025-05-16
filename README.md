@@ -1,219 +1,205 @@
-# Supabase Database Schema Documentation
+# Document Chat Application
 
-## Overview
-This document outlines the database schema for the document chat application, including tables, relationships, and security policies.
+A modern web application that allows users to upload documents, process them using AI, and chat with the content using natural language.
 
-## Tables
+## Project Overview
 
-### 1. Documents
-Stores information about uploaded documents.
+This application enables users to:
+- Upload various document formats (PDF, TXT, DOCX)
+- Process documents using AI for better understanding
+- Chat with the document content using natural language
+- Get AI-generated summaries and insights
+- Search through document content efficiently
 
+## Technical Implementation
+
+### 1. Database Schema
+
+The application uses Supabase as the backend with the following main tables:
+
+#### Documents Table
 ```sql
 CREATE TABLE documents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
   name TEXT NOT NULL,
   file_path TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' 
-    CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  file_size INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  file_size BIGINT NOT NULL,
   mime_type TEXT NOT NULL,
-  error_message TEXT
-);
-```
-
-**Security Policies:**
-- Users can only read their own documents
-- Users can only insert their own documents
-- Users can only update their own documents
-- Users can only delete their own documents
-
-### 2. Document Chunks
-Stores text chunks from documents with vector embeddings for similarity search.
-
-```sql
-CREATE TABLE document_chunks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  embedding VECTOR(1536), -- OpenAI embeddings dimension
-  chunk_index INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**Indexes:**
-- `document_chunks_embedding_idx`: IVFFlat index for vector similarity search
-
-**Security Policies:**
-- Users can only access chunks from their own documents
-- All operations (SELECT, INSERT, UPDATE, DELETE) are restricted to document owners
-
-### 3. Conversations
-Stores chat conversations between users and the AI.
-
-```sql
-CREATE TABLE conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
+  error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-**Security Policies:**
-- Users can only read their own conversations
-- Users can only create conversations for themselves
-- Users can only update their own conversations
-- Users can only delete their own conversations
-
-### 4. Messages
-Stores individual messages within conversations.
-
+#### Document Chunks Table
 ```sql
+CREATE TABLE document_chunks (
+  id UUID PRIMARY KEY,
+  document_id UUID REFERENCES documents(id),
+  content TEXT NOT NULL,
+  embedding vector(768),
+  chunk_index INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+#### Conversations and Messages
+```sql
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  title TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY,
+  conversation_id UUID REFERENCES conversations(id),
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-**Security Policies:**
-- Users can only access messages from their own conversations
-- All operations are restricted to conversation owners
+### 2. Document Processing Flow
 
-### 5. Citations
-Stores references to document chunks used in AI responses.
+1. **Upload Process**
+   - User selects a document (PDF, TXT, or DOCX)
+   - File is uploaded to Supabase Storage
+   - Initial document record is created with 'pending' status
+   - File is processed for text extraction
 
-```sql
-CREATE TABLE citations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-  chunk_id UUID NOT NULL REFERENCES document_chunks(id) ON DELETE CASCADE,
-  start_char INTEGER NOT NULL,
-  end_char INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
+2. **Processing Pipeline**
+   - Document is split into manageable chunks
+   - Each chunk is processed for embeddings
+   - Embeddings are stored in the document_chunks table
+   - Status is updated to 'completed' when done
 
-**Security Policies:**
-- Users can only access citations from their own messages
-- All operations are restricted to message owners
+3. **Chat Interface**
+   - Users can start conversations about documents
+   - Messages are stored with user/assistant roles
+   - Context is maintained using document chunks
+   - Citations are provided for answers
 
-## Functions
+### 3. Key Features
 
-### match_documents
-Function for performing similarity search on document chunks.
+#### Document Management
+- Secure file upload with progress tracking
+- Support for multiple file formats
+- File size limits and validation
+- Status tracking and error handling
 
-```sql
-CREATE OR REPLACE FUNCTION match_documents(
-  query_embedding VECTOR(1536),
-  match_threshold FLOAT,
-  match_count INT,
-  user_id UUID
-)
-RETURNS TABLE (
-  id UUID,
-  document_id UUID,
-  content TEXT,
-  similarity FLOAT
-)
-```
+#### AI Integration
+- Document chunking and embedding generation
+- Semantic search capabilities
+- Natural language processing
+- Context-aware responses
 
-**Parameters:**
-- `query_embedding`: Vector embedding of the search query
-- `match_threshold`: Minimum similarity score (0-1)
-- `match_count`: Maximum number of results to return
-- `user_id`: User ID for filtering results
+#### User Interface
+- Modern, responsive design
+- Real-time status updates
+- Interactive chat interface
+- Document preview and management
 
-**Returns:**
-- Matching document chunks with similarity scores
-- Only returns chunks from documents owned by the specified user
+### 4. Security Implementation
 
-## Extensions
+1. **Authentication**
+   - Supabase Auth integration
+   - JWT token-based authentication
+   - Secure session management
 
-- `vector`: Used for storing and querying vector embeddings
-- `pgvector`: Required for vector similarity search operations
+2. **Authorization**
+   - Row Level Security (RLS) policies
+   - User-specific data access
+   - Secure file storage
 
-## Security
+3. **Data Protection**
+   - Encrypted file storage
+   - Secure API endpoints
+   - Input validation and sanitization
 
-All tables have Row Level Security (RLS) enabled with policies that ensure:
-1. Users can only access their own data
-2. All operations are authenticated
-3. Data is properly isolated between users
-4. Cascading deletes maintain referential integrity
+### 5. API Structure
 
-## Relationships
+#### Document Endpoints
+- `POST /api/documents/upload` - Upload new document
+- `GET /api/documents` - List user's documents
+- `PATCH /api/documents/:id` - Update document status
+- `DELETE /api/documents/:id` - Remove document
 
-```mermaid
-erDiagram
-    users ||--o{ documents : owns
-    documents ||--o{ document_chunks : contains
-    users ||--o{ conversations : has
-    conversations ||--o{ messages : contains
-    messages ||--o{ citations : references
-    document_chunks ||--o{ citations : cited_in
-```
+#### Chat Endpoints
+- `POST /api/chat` - Send message
+- `GET /api/chat/:id` - Get conversation history
+- `POST /api/chat/summarize` - Generate document summary
 
-## Usage Examples
+### 6. Frontend Components
 
-### 1. Creating a New Document
-```sql
-INSERT INTO documents (user_id, name, file_path, file_size, mime_type)
-VALUES ('user_uuid', 'document.pdf', 'path/to/file.pdf', 1024, 'application/pdf');
-```
+#### Core Components
+- `DocumentUpload` - File upload interface
+- `DocumentList` - Document management
+- `ChatInterface` - Conversation UI
+- `SpeechInput` - Voice input support
 
-### 2. Searching Similar Content
-```sql
-SELECT * FROM match_documents(
-  '[0.1, 0.2, ...]'::vector(1536),
-  0.7,
-  5,
-  'user_uuid'
-);
-```
+#### UI Features
+- Progress indicators
+- Status badges
+- Error handling
+- Loading states
 
-### 3. Creating a Conversation
-```sql
-INSERT INTO conversations (user_id, title)
-VALUES ('user_uuid', 'New Chat')
-RETURNING id;
-```
+### 7. Development Setup
 
-### 4. Adding a Message
-```sql
-INSERT INTO messages (conversation_id, role, content)
-VALUES ('conversation_uuid', 'user', 'Hello, AI!');
-```
+1. **Prerequisites**
+   - Node.js 18+
+   - Supabase account
+   - OpenAI API key
 
-## Maintenance
+2. **Environment Setup**
+   ```bash
+   # Install dependencies
+   npm install
 
-### Backup
-```bash
-make backup
-```
+   # Set up environment variables
+   cp .env.example .env.local
+   ```
 
-### Restore
-```bash
-make restore
-```
+3. **Database Setup**
+   ```bash
+   # Apply migrations
+   supabase db push
+   ```
 
-### Type Generation
-```bash
-make types
-```
+4. **Development Server**
+   ```bash
+   npm run dev
+   ```
 
-## Migration Management
+### 8. Deployment
 
-See the Makefile for available migration commands:
-- `make migrate-new`: Create new migration
-- `make migrate-up`: Apply pending migrations
-- `make migrate-down`: Rollback last migration
-- `make migrate-reset`: Reset all migrations
-- `make db-status`: Check migration status
+1. **Build Process**
+   ```bash
+   npm run build
+   ```
+
+2. **Environment Configuration**
+   - Set production environment variables
+   - Configure Supabase project
+   - Set up storage buckets
+
+3. **Deployment Steps**
+   - Deploy to Vercel/Netlify
+   - Configure production database
+   - Set up monitoring
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

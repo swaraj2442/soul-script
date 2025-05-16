@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase/client';
 import { getEmbedding } from '@/lib/openai/client';
 import { toast } from 'sonner';
 
-export function Chat() {
+interface ChatProps {
+  documentId: string;
+}
+
+export function Chat({ documentId }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -40,13 +44,17 @@ export function Chat() {
         throw new Error('Not authenticated');
       }
 
+      // Generate embedding for the question
+      const questionEmbedding = await getEmbedding(content);
+
       // Search for relevant document chunks
       const { data: searchResults, error: searchError } = await supabase.rpc(
         'match_documents',
         {
-          query_embedding: await getEmbedding(content),
-          match_threshold: 0.7,
+          target_document_id: documentId,
           match_count: 5,
+          match_threshold: 0.7,
+          query_embedding: questionEmbedding,
           user_id: session.user.id
         }
       );
@@ -56,50 +64,47 @@ export function Chat() {
         throw new Error('Failed to search documents');
       }
 
+      if (!searchResults || searchResults.length === 0) {
+        toast.error('No relevant context found in the document');
+        return;
+      }
+
       // Prepare context from search results
       const context = searchResults
-        ?.map((result: any) => result.content)
-        .join('\n\n') || '';
+        .map((result: any) => result.content)
+        .join('\n\n');
 
-      // Send message to chat API
+      // Send message to API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           message: content,
-          context
-        })
+          context,
+          documentId,
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response');
+        throw new Error('Failed to get response from AI');
       }
 
       const data = await response.json();
 
-      // Add assistant message
-      const assistantMessage: Message = {
+      // Add AI response
+      const aiMessage: Message = {
         role: 'assistant',
-        content: data.message,
-        timestamp: new Date().toISOString()
+        content: data.answer,
+        timestamp: new Date().toISOString(),
+        sources: data.sources,
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
-      console.error('Chat error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to send message');
-      
-      // Add error message
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Error in chat:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process message');
     } finally {
       setIsLoading(false);
     }

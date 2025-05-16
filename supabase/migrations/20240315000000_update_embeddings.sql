@@ -18,7 +18,7 @@ CREATE TABLE documents (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Recreate table with 768-dimensional vector
+-- Create document chunks table with 768-dimensional vector (Gemini)
 CREATE TABLE document_chunks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
@@ -28,7 +28,7 @@ CREATE TABLE document_chunks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Recreate citations table
+-- Create citations table
 CREATE TABLE citations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
@@ -43,20 +43,22 @@ CREATE TABLE citations (
 CREATE INDEX ON document_chunks USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
 
--- Recreate match_documents function
+-- Create match_documents function with correct parameter order
 CREATE OR REPLACE FUNCTION match_documents(
+    target_document_id UUID,
+    match_count INT,
+    match_threshold FLOAT,
     query_embedding vector(768),
-    match_threshold float,
-    match_count int,
-    user_id uuid
+    user_id UUID
 )
 RETURNS TABLE (
     id UUID,
     document_id UUID,
     content TEXT,
-    similarity float
+    similarity FLOAT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY
@@ -68,6 +70,8 @@ BEGIN
     FROM document_chunks dc
     JOIN documents d ON d.id = dc.document_id
     WHERE d.user_id = match_documents.user_id
+    AND d.status = 'completed'
+    AND d.id = match_documents.target_document_id
     AND 1 - (dc.embedding <=> query_embedding) > match_threshold
     ORDER BY similarity DESC
     LIMIT match_count;
