@@ -1,77 +1,75 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, FileText, MessageSquare, Shield } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-
-const useCases = [
-  "Extract key insights from lengthy documents in seconds",
-  "Get instant answers to complex questions about your documents",
-  "Summarize multiple documents with AI-powered analysis",
-  "Find specific information across your entire document library",
-  "Generate detailed reports from your document collections",
-  "Translate and analyze documents in multiple languages",
-  "Identify patterns and trends across your documents",
-  "Create searchable knowledge bases from your documents"
-];
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { ArrowRight, FileText, MessageSquare, Sparkles, Loader2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { GradientAnimation } from '@/components/ui/gradient-animation'
 
 export default function Home() {
-  const { data: session } = useSession();
-  const [currentUseCase, setCurrentUseCase] = useState(0);
+  const [user, setUser] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (session) {
-      const interval = setInterval(() => {
-        setCurrentUseCase((prev) => (prev + 1) % useCases.length);
-      }, 3000);
-      return () => clearInterval(interval);
+    const getUser = async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        if (data.user) {
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [session]);
+    getUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full flex flex-col">
+    <div className="flex flex-col min-h-screen relative">
+      <GradientAnimation
+        colors={["#FF6B6B", "#4ECDC4", "#45B7D1"]}
+        duration={20}
+        blur={80}
+        opacity={0.2}
+      />
+      
       {/* Hero Section */}
-      <section className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background to-muted/20">
-        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex flex-col items-center space-y-6 text-center">
-            <div className="space-y-4 max-w-3xl">
+      <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-background/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+          <div className="flex flex-col items-center justify-center space-y-6 text-center">
+            <div className="space-y-4">
               <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-                Unlock insights from your documents with AI
+                Soul Script
               </h1>
-              <p className="mx-auto text-lg md:text-xl text-muted-foreground leading-relaxed">
-                Upload documents, ask questions, and get instant answers powered by AI.
+              <p className="mx-auto max-w-[700px] text-lg md:text-xl text-muted-foreground">
+                Upload your documents and ask questions about their content using AI
+              </p>
+            </div>
+            <div className="space-y-4 max-w-2xl">
+              <p className="text-lg md:text-xl text-muted-foreground">
                 Soul Script analyzes your content to provide accurate, contextual responses.
               </p>
             </div>
-            {session && (
-              <div className="w-full max-w-3xl mt-8">
-                <div className="relative h-16 overflow-hidden">
-                  {useCases.map((useCase, index) => (
-                    <div
-                      key={useCase}
-                      className={`absolute w-full transition-all duration-500 ease-in-out ${
-                        index === currentUseCase
-                          ? 'translate-y-0 opacity-100'
-                          : 'translate-y-full opacity-0'
-                      }`}
-                    >
-                      <p className="text-lg md:text-xl font-medium text-primary/80">
-                        {useCase}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-4 pt-6">
               <Link href="/dashboard">
-                <Button size="lg" className="w-full sm:w-auto gap-2 text-base">
+                <Button size="lg" className="w-full sm:w-auto gap-2 text-base px-8">
                   Get Started <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
-              {!session && (
+              {isLoading ? (
+                <div className="h-12 w-32 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : !user && (
                 <Link href="/auth/login">
                   <Button variant="outline" size="lg" className="w-full sm:w-auto text-base">
                     Log In
@@ -84,9 +82,9 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="w-full py-16 md:py-24 lg:py-32 bg-background">
-        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
-          <div className="flex flex-col items-center justify-center space-y-8">
+      <section className="w-full py-16 md:py-24 lg:py-32 bg-background/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 md:px-6 max-w-6xl">
+          <div className="flex flex-col items-center justify-center space-y-12">
             <div className="space-y-4 text-center max-w-3xl">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                 Key Features
@@ -95,32 +93,32 @@ export default function Home() {
                 Our powerful AI chatbot helps you extract insights from your documents.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-              <div className="flex flex-col items-center space-y-4 border rounded-xl p-8 bg-card shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+              <div className="flex flex-col items-center space-y-4 p-8 bg-card/50 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all">
                 <div className="p-3 bg-primary/10 rounded-full">
                   <FileText className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Document Processing</h3>
-                <p className="text-muted-foreground text-center text-lg">
-                  Upload PDFs, TXT, and DOCX files. Our system processes and indexes your documents for quick retrieval.
+                <h3 className="text-xl font-bold">Document Upload</h3>
+                <p className="text-center text-muted-foreground">
+                  Upload your documents in various formats for AI analysis
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-4 border rounded-xl p-8 bg-card shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+              <div className="flex flex-col items-center space-y-4 p-8 bg-card/50 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all">
                 <div className="p-3 bg-primary/10 rounded-full">
                   <MessageSquare className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">AI-Powered Q&A</h3>
-                <p className="text-muted-foreground text-center text-lg">
-                  Ask questions in natural language about your documents and get accurate, contextual answers.
+                <h3 className="text-xl font-bold">Smart Q&A</h3>
+                <p className="text-center text-muted-foreground">
+                  Ask questions about your documents and get instant answers
                 </p>
               </div>
-              <div className="flex flex-col items-center space-y-4 border rounded-xl p-8 bg-card shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+              <div className="flex flex-col items-center space-y-4 p-8 bg-card/50 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-all">
                 <div className="p-3 bg-primary/10 rounded-full">
-                  <Shield className="h-8 w-8 text-primary" />
+                  <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Secure & Private</h3>
-                <p className="text-muted-foreground text-center text-lg">
-                  Your documents and data are secured with enterprise-grade encryption and authentication.
+                <h3 className="text-xl font-bold">AI-Powered</h3>
+                <p className="text-center text-muted-foreground">
+                  Advanced AI technology for accurate and contextual responses
                 </p>
               </div>
             </div>
@@ -128,5 +126,5 @@ export default function Home() {
         </div>
       </section>
     </div>
-  );
+  )
 }

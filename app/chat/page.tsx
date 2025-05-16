@@ -23,6 +23,8 @@ import { supabase } from '@/lib/supabase/client';
 import { DocumentUpload } from '@/components/documents/document-upload';
 import { toast } from 'sonner';
 import { AI_MODELS, AIModel } from '@/lib/openai/client';
+import { SpeechInput } from '@/components/chat/speech-input'
+import { GradientAnimation } from '@/components/ui/gradient-animation'
 
 interface Message {
   id: string;
@@ -256,9 +258,16 @@ export default function ChatPage() {
   }
   
   return (
-    <div className="container max-w-[1400px] h-[calc(100vh-64px)] flex flex-col mx-auto px-4">
-      <div className="max-w-[1200px] mx-auto w-full h-full flex flex-col">
-        <div className="flex items-center py-4 border-b">
+    <div className="container max-w-[1400px] h-[calc(100vh-64px)] flex flex-col mx-auto px-4 relative">
+      <GradientAnimation
+        colors={["#818CF8", "#A78BFA", "#F9A8D4"]}
+        duration={45}
+        blur={150}
+        opacity={0.12}
+        size={120}
+      />
+      <div className="max-w-[1200px] mx-auto w-full h-full flex flex-col relative">
+        <div className="flex items-center py-4 border-b bg-background/50 backdrop-blur-sm">
           <Button 
             variant="ghost" 
             size="icon"
@@ -325,7 +334,7 @@ export default function ChatPage() {
         </div>
         
         {showUploader && (
-          <Card className="p-4 my-4 border-2 hover:border-primary/50 transition-colors hover:shadow-lg">
+          <Card className="p-4 my-4 border-2 hover:border-primary/50 transition-colors hover:shadow-lg bg-background/50 backdrop-blur-sm">
             <DocumentUpload onUploadComplete={handleDocumentUpload} />
           </Card>
         )}
@@ -358,10 +367,10 @@ export default function ChatPage() {
                 </div>
                 
                 <div
-                  className={`space-y-2 p-4 rounded-lg ${
+                  className={`space-y-2 p-4 rounded-lg backdrop-blur-sm ${
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      ? 'bg-primary/90 text-primary-foreground'
+                      : 'bg-muted/80'
                   }`}
                 >
                   {message.id.startsWith('loading') ? (
@@ -380,7 +389,7 @@ export default function ChatPage() {
           {/* Sources section */}
           {sources.length > 0 && (
             <div className="mt-6">
-              <div className="rounded-lg bg-muted/50 p-4 border-2">
+              <div className="rounded-lg bg-muted/50 p-4 border-2 backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-2 bg-primary/10 rounded-full">
                     <Sparkles className="h-5 w-5 text-primary" />
@@ -411,7 +420,7 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
         
-        <div className="sticky bottom-0 bg-background border-t p-4">
+        <div className="sticky bottom-0 bg-background/50 backdrop-blur-sm border-t p-4">
           <div className="flex gap-3">
             <Input
               placeholder={selectedDocument ? "Ask a question about the selected document..." : "Please select a document first..."}
@@ -420,6 +429,15 @@ export default function ChatPage() {
               onKeyDown={handleKeyDown}
               disabled={isSending || !selectedDocument}
               className="flex-1 h-11 text-base"
+            />
+            <SpeechInput
+              onTranscript={(text) => {
+                setInput(text);
+                if (text.trim()) {
+                  handleSendMessage();
+                }
+              }}
+              disabled={isSending || !selectedDocument}
             />
             <Button 
               onClick={handleSendMessage} 
@@ -433,7 +451,7 @@ export default function ChatPage() {
               )}
             </Button>
           </div>
-          
+        
           <div className="flex justify-between items-center mt-3">
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               <Info className="h-4 w-4" />

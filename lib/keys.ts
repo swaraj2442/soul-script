@@ -1,17 +1,17 @@
 // API Keys and sensitive configuration
 export const keys = {
   supabase: {
-    url: '',
-    anonKey: '',
-    serviceRoleKey: ''
+    url: process.env.SUPABASE_URL || '',
+    anonKey: process.env.SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   },
   openai: {
-    apiKey: ''
+    apiKey: process.env.OPENAI_API_KEY || ''
   },
   gemini: {
-    apiKey: ''
+    apiKey: process.env.GEMINI_API_KEY || ''
   },
   huggingface: {
-    apiKey: 'hf_1234567890'
+    apiKey: process.env.HUGGINGFACE_API_KEY || ''
   }
 } as const; 
